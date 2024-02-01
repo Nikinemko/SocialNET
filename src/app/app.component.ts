@@ -2,6 +2,7 @@ import { Component } from '@angular/core';
 import { MatBottomSheet } from '@angular/material/bottom-sheet';
 import { AuthenticatorComponent } from './tools/authenticator/authenticator.component';
 import { FirebaseTSAuth } from 'firebasets/firebasetsAuth/firebaseTSAuth';
+import { FirebaseTSFirestore } from 'firebasets/firebasetsFirestore/firebaseTSFirestore';
 import { Router } from '@angular/router';
 @Component({
   selector: 'app-root',
@@ -11,24 +12,39 @@ import { Router } from '@angular/router';
 export class AppComponent {
   title = 'Social Network';
   auth = new FirebaseTSAuth();
+  firestore = new FirebaseTSFirestore();
+  userHasProfile = true;
+  userDocument!: UserDocument;
   constructor(private loginSheet: MatBottomSheet, private router: Router) {
     this.auth.listenToSignInStateChanges((user) => {
       this.auth.checkSignInState({
         whenSignedIn: (user) => {
-          alert('Logged In');
+          // alert('Logged In');
         },
         whenSignedOut: (user) => {
-          alert('Logged Out');
+          // alert('Logged Out');
         },
         whenSignedInAndEmailNotVerified: (user) => {
           this.router.navigate(['emailVerification']);
         },
-        whenSignedInAndEmailVerified: (user) => {},
+        whenSignedInAndEmailVerified: (user) => {
+          this.getUserProfile();
+        },
         whenChanged: (user) => {},
       });
     });
   }
 
+  getUserProfile() {
+    this.firestore.listenToDocument({
+      name: 'Getting Document',
+      path: ['Users', this.auth?.getAuth()?.currentUser?.uid || '{}'],
+      onUpdate: (result) => {
+        this.userDocument = <UserDocument>result.data();
+        this.userHasProfile = result.exists;
+      },
+    });
+  }
   loggedIn() {
     return this.auth.isSignedIn();
   }
@@ -38,4 +54,9 @@ export class AppComponent {
   onLogoutClick() {
     this.auth.signOut();
   }
+}
+
+export interface UserDocument {
+  publicName: string;
+  description: string;
 }
